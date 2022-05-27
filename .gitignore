@@ -1,0 +1,7 @@
+datasource.properties
+.classpath
+.project
+.git
+.settings
+*/target/*
+target/*
