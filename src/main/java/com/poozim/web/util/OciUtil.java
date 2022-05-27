@@ -11,6 +11,8 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -196,6 +198,60 @@ public class OciUtil {
 	}
 	
 	/**
+	 * 오브젝트 업로드 메서드
+	 * 
+	 * @param bucketName
+	 * @param file
+	 * @return 성공 1, 실패 0
+	 * @throws IOException 
+	 * @throws IllegalStateException 
+	 */
+	public static boolean[] createObjectList(String bucketName, List<Part> fileList, List<String> objectNameList) throws IllegalStateException, IOException {
+		boolean[] res = new boolean[fileList.size()];
+		
+		UploadConfiguration uploadConfiguration =
+                UploadConfiguration.builder()
+                        .allowMultipartUploads(true)
+                        .allowParallelUploads(true)
+                        .build();
+		
+		UploadManager uploadManager = new UploadManager(client, uploadConfiguration);
+		
+        Map<String, String> metadata = null;
+        
+        for(int i=0; i<fileList.size(); i++) {
+        	String objectName = objectNameList.get(i);
+        	FilePart file = (FilePart) fileList.get(0);
+        	
+        	String ext = objectName.substring(objectName.lastIndexOf(".") + 1); 
+        	
+        	File object = File.createTempFile(objectName.substring(0, objectName.lastIndexOf(".")), "."+ext);
+        	file.transferTo(object);
+        	
+        	PutObjectRequest request =
+	                PutObjectRequest.builder()
+	                        .bucketName(bucketName)
+	                        .namespaceName(namespaceName)
+	                        .objectName(objectName)
+	                        .contentType(file.headers().getContentType().toString())
+	                        .contentLanguage(null)
+	                        .contentEncoding(null)
+	                        .opcMeta(metadata)
+	                        .build();
+        	
+        	UploadRequest uploadDetails =
+	                UploadRequest.builder(object).allowOverwrite(true).build(request);
+		
+			UploadResponse response = uploadManager.upload(uploadDetails);
+			
+			res[i] = (response == null? true : false);
+			
+        }
+        
+        return res;
+	}
+	
+	/**
 	 * 오브젝트 다운로드 메서드
 	 * 
 	 * @param bucketName 버킷명
@@ -366,4 +422,5 @@ public class OciUtil {
         InputStream stream = response.getInputStream();
         return stream;
 	}
+	
 }
