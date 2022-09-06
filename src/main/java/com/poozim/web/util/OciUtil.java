@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,9 @@ import com.oracle.bmc.objectstorage.transfer.UploadConfiguration;
 import com.oracle.bmc.objectstorage.transfer.UploadManager;
 import com.oracle.bmc.objectstorage.transfer.UploadManager.UploadRequest;
 import com.oracle.bmc.objectstorage.transfer.UploadManager.UploadResponse;
+import com.poozim.web.exception.CustomException;
+import com.poozim.web.exception.ErrorCode;
+import com.poozim.web.model.ObjectVO;
 
 @Component
 public class OciUtil {
@@ -206,8 +210,8 @@ public class OciUtil {
 	 * @throws IOException 
 	 * @throws IllegalStateException 
 	 */
-	public static boolean[] createObjectList(String bucketName, List<Part> fileList, List<String> objectNameList) throws IllegalStateException, IOException {
-		boolean[] res = new boolean[fileList.size()];
+	public static String[] createObjectList(String bucketName, List<Part> fileList) throws IllegalStateException, IOException {
+		String[] res = new String[fileList.size()];
 		
 		UploadConfiguration uploadConfiguration =
                 UploadConfiguration.builder()
@@ -220,14 +224,16 @@ public class OciUtil {
         Map<String, String> metadata = null;
         
         for(int i=0; i<fileList.size(); i++) {
-        	String objectName = objectNameList.get(i);
-        	FilePart file = (FilePart) fileList.get(0);
+        	FilePart file = (FilePart) fileList.get(i);
         	
+        	StringBuilder sb = new StringBuilder(file.filename());
+        	sb.insert(file.filename().lastIndexOf("."), "_" + TimeUtil.getDateTimeString());
+        	
+        	String objectName = sb.toString();
         	String ext = objectName.substring(objectName.lastIndexOf(".") + 1); 
-        	
         	File object = File.createTempFile(objectName.substring(0, objectName.lastIndexOf(".")), "."+ext);
-        	file.transferTo(object);
-        	
+//        	File object = new File("/www/" + file.filename());
+        	file.transferTo(object).subscribe();
         	PutObjectRequest request =
 	                PutObjectRequest.builder()
 	                        .bucketName(bucketName)
@@ -244,7 +250,11 @@ public class OciUtil {
 		
 			UploadResponse response = uploadManager.upload(uploadDetails);
 			
-			res[i] = (response == null? true : false);
+			res[i] = objectName;
+			
+			if(response == null) {
+				throw new CustomException(ErrorCode.OBJECT_UPLOAD_ERROR);
+			}
 			
         }
         
@@ -348,13 +358,14 @@ public class OciUtil {
 	 * @param prefix 오브젝트 이름 시작 문자열
 	 * @return
 	 */
-	public static List<ObjectSummary> getObjectList(String bucketName, String prefix) {
+	public static List<ObjectVO> getObjectList(String bucketName, String prefix, int limit) {
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
         			.bucketName(bucketName)
         			.fields("size, md5, timeCreated, timeModified")
         			.prefix(prefix)
+        			.limit(limit)
         			.build();
         
         ListObjectsResponse response = client.listObjects(request);
@@ -362,7 +373,14 @@ public class OciUtil {
         ListObjects list = response.getListObjects();
         List<ObjectSummary> objectList = list.getObjects();
         
-		return objectList;
+        List<ObjectVO> objectVOList = new ArrayList<ObjectVO>();
+        
+        //Conver to VO
+        for(int i=0; i<objectList.size(); i++) {
+        	objectVOList.add(new ObjectVO().convertFromObjectSummary(objectList.get(i)));
+        }
+        
+		return objectVOList;
 	}
 	
 	/**
@@ -372,7 +390,7 @@ public class OciUtil {
 	 * @param objectName 오브젝트 이름
 	 * @return
 	 */
-	public static ObjectSummary getObjectOne(String bucketName, String objectName) {
+	public static ObjectVO getObjectOne(String bucketName, String objectName) {
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
@@ -386,7 +404,7 @@ public class OciUtil {
         ListObjects list = response.getListObjects();
         List<ObjectSummary> objectList = list.getObjects();
         
-		return objectList.get(0);
+		return new ObjectVO().convertFromObjectSummary(objectList.get(0));
 	}
 	
 	/**

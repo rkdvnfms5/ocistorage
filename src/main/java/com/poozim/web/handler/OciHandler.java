@@ -1,5 +1,6 @@
 package com.poozim.web.handler;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -17,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.codec.multipart.FormFieldPart;
 import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
@@ -25,11 +28,15 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.oracle.bmc.audit.model.Data;
 import com.oracle.bmc.objectstorage.ObjectStorage;
+import com.oracle.bmc.objectstorage.model.ObjectSummary;
 import com.poozim.web.aop.Bucket;
 import com.poozim.web.aop.PreAuth;
 import com.poozim.web.exception.GlobalErrorAttributes;
+import com.poozim.web.model.ObjectVO;
 import com.poozim.web.util.OciUtil;
 
+import io.vavr.Tuple2;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -120,15 +127,6 @@ public class OciHandler {
 				throw new BadRequestException("Empty Bucket's Name");
 			}
 			
-			//Check ObjectName
-			List<String> objectNameList = data.get("objectName").stream()
-											.map(part -> part.toString())
-											.collect(Collectors.toList());
-			
-			if(objectNameList.size() < 1) {
-				throw new BadRequestException("Empty Object's Name");
-			}
-			
 			//Check Files
 			List<Part> fileList = data.get("files");
 			
@@ -136,33 +134,56 @@ public class OciHandler {
 				throw new BadRequestException("Empty Files");
 			}
 			
-			if(fileList.size() != objectNameList.size()) {
-				throw new BadRequestException("Incorret Size Files and Object Names");
-			}
-			
-			//Upload Object to Storage
 			try {
-				return ServerResponse.ok().body(Mono.just(OciUtil.createObjectList(bucketName, fileList, objectNameList)), Arrays.class);
+				return ServerResponse.ok().body( Mono.just(OciUtil.createObjectList(bucketName, fileList)), Arrays.class);
+			} catch (IllegalStateException e) {
+				log.error(e.getMessage(), e);
 			} catch (IOException e) {
 				log.error(e.getMessage(), e);
 			}
+			
 			return null;
 		});
 	}
 	
+	@Bucket
 	public Mono<ServerResponse> deleteObject(ServerRequest request) {
+		String bucketName = request.headers().firstHeader("X-BUCKET");
+		String objectName = Optional.ofNullable(request.pathVariable("name")).orElse("").trim();
 		
-		return ServerResponse.ok().body(null);
+		if(objectName.length() < 1) {
+			throw new BadRequestException("Empty Object's Name");
+		}
+		
+		int res = OciUtil.deleteObject(bucketName, objectName);
+		
+		boolean result = (res > 0? true : false);
+		return ServerResponse.ok().body(Mono.just(result), boolean.class);
 	}
 	
+	@Bucket
 	public Mono<ServerResponse> getObject(ServerRequest request) {
+		String bucketName = request.headers().firstHeader("X-BUCKET");
+		String prefix = Optional.ofNullable(request.pathVariable("name")).orElse("").trim();
 		
-		return ServerResponse.ok().body(null);
+		if(prefix.length() < 1) {
+			throw new BadRequestException("Empty Object's Name");
+		}
+		
+		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectOne(bucketName, prefix)), ObjectVO.class);
 	}
 	
+	@Bucket
 	public Mono<ServerResponse> getObjectList(ServerRequest request) {
+		String bucketName = request.headers().firstHeader("X-BUCKET");
+		String prefix = Optional.ofNullable(request.pathVariable("name")).orElse("").trim();
+		int limit = Integer.parseInt(request.queryParam("limit").orElse("10"));
 		
-		return ServerResponse.ok().body(null);
+		if(prefix.length() < 1) {
+			throw new BadRequestException("Empty Object's Name");
+		}
+		
+		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectList(bucketName, prefix, limit)), List.class);
 	}
 	
 	@PreAuth

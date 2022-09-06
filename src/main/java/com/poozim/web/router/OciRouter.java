@@ -17,13 +17,14 @@ public class OciRouter {
 	public RouterFunction<ServerResponse> routeOci(OciHandler handler){
 		
 		return RouterFunctions.route()
-					.GET("/test", request -> handler.test(request))
-					.POST("/bucket", request -> handler.createBucket(request))
-					.POST("/preauth", request -> handler.createPreAuth(request))
-					.POST("/object", request -> handler.createObject(request))
-					.GET("/object/{name}", request -> handler.getObject(request))
-					.DELETE("/object/{name}", request -> handler.deleteBucket(request))
-					.GET("/object/{name}/src", request -> handler.getObjectSrc(request))
+					.GET("/storage/test", request -> handler.test(request))
+					.POST("/storage/bucket", request -> handler.createBucket(request))
+					.POST("/storage/preauth", request -> handler.createPreAuth(request))
+					.POST("/storage/object", request -> handler.createObject(request))
+					.GET("/storage/object/{name}/one", request -> handler.getObject(request))
+					.GET("/storage/object/{name}/list", request -> handler.getObjectList(request))
+					.GET("/storage/object/{name}/src", request -> handler.getObjectSrc(request))
+					.DELETE("/storage/object/{name}", request -> handler.deleteObject(request))
 					.build();
 	}
 }
