@@ -36,8 +36,6 @@ public class AclFilter implements WebFilter{
 	
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-		log.info("Web filter");
-		
 		// check ACL_ID, ACL_PASSWD Init
 		if(ACL_ID == null || ACL_PASSWD == null) {
 			log.error("Init ACL_ID or ACL_PASSWD ERROR");
@@ -56,7 +54,7 @@ public class AclFilter implements WebFilter{
 		}
 		
 		if(!id.equals(this.ACL_ID) || !password.equals(this.ACL_PASSWD)) {
-			log.error("ID OR PASSWORD IS NOT MATCH");
+			log.error("ID OR PASSWORD IS NOT MATCH \nID : " + id + "\nPASSWORD : " + password);
 			throw new CustomException(ErrorCode.HANDLE_ACCESS_DENIED); 
 		}
 		

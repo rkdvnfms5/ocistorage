@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +48,7 @@ import com.oracle.bmc.objectstorage.transfer.UploadManager.UploadResponse;
 import com.poozim.web.exception.CustomException;
 import com.poozim.web.exception.ErrorCode;
 import com.poozim.web.model.ObjectVO;
+import com.poozim.web.model.OciResponse;
 
 @Component
 public class OciUtil {
@@ -73,7 +75,7 @@ public class OciUtil {
 	 * @param 가져올 버킷 이름
 	 * @return 버킷
 	 */
-	public static Bucket getBucket(String bucketName) {
+	public static OciResponse<Bucket> getBucket(String bucketName) {
 		GetBucketRequest request =
 	        		GetBucketRequest.builder()
 	        			.namespaceName(namespaceName)
@@ -82,7 +84,15 @@ public class OciUtil {
 	        
         GetBucketResponse response = client.getBucket(request);
 	        
-		return response.getBucket();
+        Bucket bucket = response.getBucket();
+        
+        OciResponse<Bucket> result = OciResponse.<Bucket>builder()
+        								.status((bucket == null? 500 : 200))
+        								.success((bucket == null? false : true))
+        								.data(bucket)
+        								.msg((bucket == null? "Not Founded Bucket" : ""))
+        								.build();
+        return result;
 	}
 	
 	/**
@@ -92,7 +102,7 @@ public class OciUtil {
 	 * @return 생성된 버킷 이름
 	 * @throws IOException
 	 */
-	public static String createBucket(String bucketName) throws IOException {
+	public static OciResponse<Bucket> createBucket(String bucketName) throws IOException {
 		CreateBucketDetails createBucketDetails =
         		CreateBucketDetails.builder()
         			.compartmentId(compartmentId)
@@ -108,7 +118,16 @@ public class OciUtil {
         
         CreateBucketResponse response = client.createBucket(request);
         
-		return response.getBucket().getName();
+        Bucket bucket = response.getBucket();
+        
+        OciResponse<Bucket> result = OciResponse.<Bucket>builder()
+				.status((bucket == null? 500 : 200))
+				.success((bucket == null? false : true))
+				.data(bucket)
+				.msg((bucket == null? "Fail Create Bucket " : ""))
+				.build();
+        
+		return result;
 	}
 	
 	/**
@@ -119,7 +138,7 @@ public class OciUtil {
 	 * @return Access URI Code
 	 * @throws IOException
 	 */
-	public static String createPreAuth(String bucketName, Date expireDate) throws IOException {
+	public static OciResponse<String> createPreAuth(String bucketName, Date expireDate) throws IOException {
 		CreatePreauthenticatedRequestDetails details = 
         		CreatePreauthenticatedRequestDetails.builder()
         			.accessType(AccessType.AnyObjectRead)
@@ -139,7 +158,20 @@ public class OciUtil {
         String accessUri = response.getPreauthenticatedRequest().getAccessUri();
         String preAuthId = response.getPreauthenticatedRequest().getId();
         
-		return accessUri.substring(accessUri.indexOf("/p/") + 3, accessUri.indexOf("/n/"));
+        String data = null;
+        if(accessUri != null) {
+        	data = accessUri.substring(accessUri.indexOf("/p/") + 3, accessUri.indexOf("/n/"));
+        }
+        
+        
+        OciResponse<String> result = OciResponse.<String>builder()
+				.status((data == null? 500 : 200))
+				.success((data == null? false : true))
+				.data(data)
+				.msg((data == null? "Fail Create PreAuth " : ""))
+				.build();
+        
+		return result;
 	}
 	
 	/**
@@ -210,7 +242,7 @@ public class OciUtil {
 	 * @throws IOException 
 	 * @throws IllegalStateException 
 	 */
-	public static String[] createObjectList(String bucketName, List<Part> fileList) throws IllegalStateException, IOException {
+	public static OciResponse<String[]> createObjectList(String bucketName, List<Part> fileList) throws IllegalStateException, IOException {
 		String[] res = new String[fileList.size()];
 		
 		UploadConfiguration uploadConfiguration =
@@ -232,8 +264,8 @@ public class OciUtil {
         	String objectName = sb.toString();
         	String ext = objectName.substring(objectName.lastIndexOf(".") + 1); 
         	File object = File.createTempFile(objectName.substring(0, objectName.lastIndexOf(".")), "."+ext);
-//        	File object = new File("/www/" + file.filename());
         	file.transferTo(object).subscribe();
+        	
         	PutObjectRequest request =
 	                PutObjectRequest.builder()
 	                        .bucketName(bucketName)
@@ -258,7 +290,14 @@ public class OciUtil {
 			
         }
         
-        return res;
+        OciResponse<String[]> result = OciResponse.<String[]>builder()
+				.status(200)
+				.success(true)
+				.data(res)
+				.msg("")
+				.build();
+        
+        return result;
 	}
 	
 	/**
@@ -321,6 +360,30 @@ public class OciUtil {
 	 * @return
 	 */
 	public static String getObjectSrc(String preAuth ,String bucketName, String objectName) {
+		//Get Bucket
+		ListObjectsRequest request =
+        		ListObjectsRequest.builder()
+        			.namespaceName(namespaceName)
+        			.bucketName(bucketName)
+        			.fields("size, md5, timeCreated, timeModified")
+        			.prefix(objectName)
+        			.build();
+        
+        ListObjectsResponse response = client.listObjects(request);
+        
+        ListObjects list = response.getListObjects();
+        List<ObjectSummary> objectList = list.getObjects();
+        ObjectVO data = null;
+        
+        if(!objectList.isEmpty()) {
+        	data = new ObjectVO().convertFromObjectSummary(objectList.get(0));
+        }
+        //End Get Bucket
+		
+        if(data == null) {
+        	return null;
+        }
+        
 		StringBuilder src = new StringBuilder(host);
 		src.append("/p/").append(preAuth)
 			.append("/n/").append(namespaceName)
@@ -337,7 +400,7 @@ public class OciUtil {
 	 * @param objectName 오브젝트 이름
 	 * @return
 	 */
-	public static int deleteObject(String bucketName, String objectName) {
+	public static OciResponse<String> deleteObject(String bucketName, String objectName) {
 		DeleteObjectRequest request = 
         		DeleteObjectRequest.builder()
         			.bucketName(bucketName)
@@ -347,8 +410,16 @@ public class OciUtil {
         
 		DeleteObjectResponse response = client.deleteObject(request);
 		
-		int res = (response == null? 0 : 1);
-        return res;
+//		int res = (response == null? 0 : 1);
+		
+		OciResponse<String> result = OciResponse.<String>builder()
+					.status((response == null? 500 : 200))
+					.success((response == null? false : true))
+					.data(objectName)
+					.msg((response == null? "Fail Delete Object " : ""))
+					.build();
+		 
+        return result;
 	}
 	
 	/**
@@ -356,9 +427,9 @@ public class OciUtil {
 	 * 
 	 * @param bucketName 버킷 이름
 	 * @param prefix 오브젝트 이름 시작 문자열
-	 * @return
+	 * @return List<ObjectVO>
 	 */
-	public static List<ObjectVO> getObjectList(String bucketName, String prefix, int limit) {
+	public static OciResponse<List<ObjectVO>> getObjectList(String bucketName, String prefix, int limit) {
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
@@ -372,15 +443,25 @@ public class OciUtil {
         
         ListObjects list = response.getListObjects();
         List<ObjectSummary> objectList = list.getObjects();
-        
         List<ObjectVO> objectVOList = new ArrayList<ObjectVO>();
         
         //Conver to VO
-        for(int i=0; i<objectList.size(); i++) {
-        	objectVOList.add(new ObjectVO().convertFromObjectSummary(objectList.get(i)));
+        if(objectList != null && !objectList.isEmpty()) {
+        	for(int i=0; i<objectList.size(); i++) {
+            	objectVOList.add(new ObjectVO().convertFromObjectSummary(objectList.get(i)));
+            }
         }
         
-		return objectVOList;
+        OciResponse<List<ObjectVO>> result = OciResponse.<List<ObjectVO>>builder()
+				.status((objectVOList == null || objectVOList.isEmpty( )? 404 : 200))
+				.success((objectVOList == null || objectVOList.isEmpty() ? false : true))
+				.data(objectVOList)
+				.msg((objectVOList == null || objectVOList.isEmpty() ? 
+							"Not Found " + prefix + "in " + bucketName : 
+								"Found " + objectVOList.size() + " Objects"))
+				.build();
+        
+		return result;
 	}
 	
 	/**
@@ -388,9 +469,9 @@ public class OciUtil {
 	 * 
 	 * @param bucketName 버킷 이름
 	 * @param objectName 오브젝트 이름
-	 * @return
+	 * @return ObjectVO
 	 */
-	public static ObjectVO getObjectOne(String bucketName, String objectName) {
+	public static OciResponse<ObjectVO> getObjectOne(String bucketName, String objectName) {
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
@@ -403,8 +484,20 @@ public class OciUtil {
         
         ListObjects list = response.getListObjects();
         List<ObjectSummary> objectList = list.getObjects();
+        ObjectVO data = null;
         
-		return new ObjectVO().convertFromObjectSummary(objectList.get(0));
+        if(!objectList.isEmpty()) {
+        	data = new ObjectVO().convertFromObjectSummary(objectList.get(0));
+        }
+        
+        OciResponse<ObjectVO> result = OciResponse.<ObjectVO>builder()
+				.status((data == null ? 404 : 200))
+				.success((data == null ? false : true))
+				.data(data)
+				.msg((data == null ? "Not Found " + objectName + "in " + bucketName : ""))
+				.build();
+        
+		return result;
 	}
 	
 	/**

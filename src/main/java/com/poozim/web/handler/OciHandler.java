@@ -33,6 +33,7 @@ import com.poozim.web.aop.Bucket;
 import com.poozim.web.aop.PreAuth;
 import com.poozim.web.exception.GlobalErrorAttributes;
 import com.poozim.web.model.ObjectVO;
+import com.poozim.web.model.OciResponse;
 import com.poozim.web.util.OciUtil;
 
 import io.vavr.Tuple2;
@@ -64,7 +65,7 @@ public class OciHandler {
 			}
 				
 			try {
-				return ServerResponse.ok().body(Mono.just(OciUtil.createBucket(bucketName)), String.class);
+				return ServerResponse.ok().body(Mono.just(OciUtil.createBucket(bucketName)), OciResponse.class);
 			} catch (IOException e) {
 				log.error(e.getMessage(), e);
 			}
@@ -109,7 +110,7 @@ public class OciHandler {
 			}
 			
 			try {
-				return ServerResponse.ok().body(Mono.just(OciUtil.createPreAuth(bucketName, expireDate)), String.class);
+				return ServerResponse.ok().body(Mono.just(OciUtil.createPreAuth(bucketName, expireDate)), OciResponse.class);
 			} catch (IOException e) {
 				log.error(e.getMessage(), e);
 			}
@@ -135,7 +136,7 @@ public class OciHandler {
 			}
 			
 			try {
-				return ServerResponse.ok().body( Mono.just(OciUtil.createObjectList(bucketName, fileList)), Arrays.class);
+				return ServerResponse.ok().body( Mono.just(OciUtil.createObjectList(bucketName, fileList)), OciResponse.class);
 			} catch (IllegalStateException e) {
 				log.error(e.getMessage(), e);
 			} catch (IOException e) {
@@ -155,10 +156,10 @@ public class OciHandler {
 			throw new BadRequestException("Empty Object's Name");
 		}
 		
-		int res = OciUtil.deleteObject(bucketName, objectName);
+//		int res = OciUtil.deleteObject(bucketName, objectName);
+//		boolean result = (res > 0? true : false);
 		
-		boolean result = (res > 0? true : false);
-		return ServerResponse.ok().body(Mono.just(result), boolean.class);
+		return ServerResponse.ok().body(Mono.just(OciUtil.deleteObject(bucketName, objectName)), OciResponse.class);
 	}
 	
 	@Bucket
@@ -170,7 +171,7 @@ public class OciHandler {
 			throw new BadRequestException("Empty Object's Name");
 		}
 		
-		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectOne(bucketName, prefix)), ObjectVO.class);
+		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectOne(bucketName, prefix)), OciResponse.class);
 	}
 	
 	@Bucket
@@ -183,7 +184,7 @@ public class OciHandler {
 			throw new BadRequestException("Empty Object's Name");
 		}
 		
-		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectList(bucketName, prefix, limit)), List.class);
+		return ServerResponse.ok().body(Mono.just(OciUtil.getObjectList(bucketName, prefix, limit)), OciResponse.class);
 	}
 	
 	@PreAuth
@@ -200,6 +201,13 @@ public class OciHandler {
 		
 		String src = OciUtil.getObjectSrc(preAuth, bucketName, objectName);
 		
-		return ServerResponse.ok().body(Mono.just(src), String.class);
+		OciResponse<String> result = OciResponse.<String>builder()
+										.status(200)
+										.success(true)
+										.data(src)
+										.msg("")
+										.build();
+		
+		return ServerResponse.ok().body(Mono.just(result), OciResponse.class);
 	}
 }

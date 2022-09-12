@@ -28,7 +28,7 @@ public class AuthAspect {
 			throw new CustomException(ErrorCode.PREAUTH_NOT_FOUND);
 		}
 		
-		log.info("X-AUTH Value -> " + preAuth);
+//		log.info("X-AUTH Value -> " + preAuth);
 		
 	}
 	
@@ -42,6 +42,6 @@ public class AuthAspect {
 			throw new CustomException(ErrorCode.BUCKET_NOT_FOUND);
 		}
 		
-		log.info("X-BUCKET Value -> " + bucketName);
+//		log.info("X-BUCKET Value -> " + bucketName);
 	}
 }
