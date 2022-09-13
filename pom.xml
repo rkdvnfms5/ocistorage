@@ -13,6 +13,9 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>storage</name>
 	<description>Demo project for Spring Boot</description>
+	
+	<packaging>jar</packaging>
+	
 	<properties>
 		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -141,6 +144,12 @@
 	</dependencies>
 
 	<build>
+		<finalName>ocistorage</finalName>
+	  	<resources>
+	  		<resource>      
+		      <directory>${basedir}/src/main/resources</directory>
+		    </resource>
+	  	</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
@@ -148,7 +157,35 @@
 				<configuration>	
 					<source>1.8</source>
                     <target>1.8</target>
+                    <outputDirectory>${basedir}</outputDirectory>
+                    <archive>
+			          <manifest>
+			          	<addClasspath>true</addClasspath>
+		                <classpathPrefix>libs/</classpathPrefix>
+			            <mainClass>
+			              com.poozim.web.StorageApplication
+			            </mainClass>
+			          </manifest>
+			        </archive>
 				</configuration>
+			</plugin>
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-dependency-plugin</artifactId>
+			    <executions>
+			        <execution>
+			            <id>copy-dependencies</id>
+			            <phase>prepare-package</phase>
+			            <goals>
+			                <goal>copy-dependencies</goal>
+			            </goals>
+			            <configuration>
+			                <outputDirectory>
+			                    ${basedir}/libs
+			                </outputDirectory>
+			            </configuration>
+			        </execution>
+			    </executions>
 			</plugin>
 		</plugins>
 	</build>

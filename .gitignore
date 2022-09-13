@@ -5,3 +5,8 @@ datasource.properties
 .settings
 */target/*
 target/*
+libs
+libs/*
+logs
+logs/*
+ocistorage.jar

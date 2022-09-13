@@ -28,7 +28,7 @@ public class OciHandlerTest {
 	@Test
 	public void routeTest() {
 		
-		client.get().uri("/test").accept(MediaType.TEXT_PLAIN)
+		client.get().uri("/storage/test").accept(MediaType.TEXT_PLAIN)
 			.exchange()
 			.expectStatus().isOk()
 			.expectBody(String.class).isEqualTo("hi");

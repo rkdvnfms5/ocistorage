@@ -14,8 +14,9 @@ public enum ErrorCode {
 	PREAUTH_NOT_FOUND(400, "ER007", "사전 인증값이 존재하지 않습니다."),
 	BUCKET_NOT_FOUND(400, "ER008", "버킷명이 존재하지 않습니다."),
 	
-	OBJECT_UPLOAD_ERROR(500, "ER009", "오브젝트 업로드에 실패했습니다.");
+	OBJECT_UPLOAD_ERROR(500, "ER009", "오브젝트 업로드에 실패했습니다."),
 	
+	PROPERTIES_READ_ERROR(500, "ER010", "프로퍼티 파일 읽기를 실패했습니다.");
 	;
 	
 	private final String code;
