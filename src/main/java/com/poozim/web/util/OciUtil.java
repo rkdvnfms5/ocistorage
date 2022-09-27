@@ -303,7 +303,9 @@ public class OciUtil {
         	FilePart file = (FilePart) fileList.get(i);
         	
         	StringBuilder sb = new StringBuilder(file.filename());
-        	sb.insert(file.filename().lastIndexOf("."), "_" + TimeUtil.getDateTimeString());
+        	int dot_idx = (file.filename().lastIndexOf(".") > 0 ? file.filename().lastIndexOf(".") : 0);
+        	
+        	sb.insert(dot_idx, "_" + TimeUtil.getDateTimeString());
         	
         	String objectName = sb.toString();
         	String ext = objectName.substring(objectName.lastIndexOf(".") + 1); 
