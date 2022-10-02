@@ -12,12 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.oracle.bmc.model.BmcException;
 import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.model.Bucket;
 import com.oracle.bmc.objectstorage.model.CreateBucketDetails;
@@ -47,11 +50,14 @@ import com.oracle.bmc.objectstorage.transfer.UploadManager.UploadRequest;
 import com.oracle.bmc.objectstorage.transfer.UploadManager.UploadResponse;
 import com.poozim.web.exception.CustomException;
 import com.poozim.web.exception.ErrorCode;
+import com.poozim.web.handler.OciHandler;
 import com.poozim.web.model.ObjectVO;
 import com.poozim.web.model.OciResponse;
 
 @Component
 public class OciUtil {
+	private Logger log = LoggerFactory.getLogger(OciUtil.class);
+	
 	public static PropertiesUtil propsUtil;
 	public static String compartmentId;
 	public static String namespaceName;
@@ -102,7 +108,19 @@ public class OciUtil {
 	 * @return 생성된 버킷 이름
 	 * @throws IOException
 	 */
-	public static OciResponse<Bucket> createBucket(String bucketName) throws IOException {
+	public static OciResponse<String> createBucket(String bucketName) throws IOException {
+		//Bucket Check
+		if(checkBucketExist(bucketName)) {
+			OciResponse<String> result = OciResponse.<String>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Already bucket Exist")
+					.build();
+	        
+			return result;
+		}
+		
 		CreateBucketDetails createBucketDetails =
         		CreateBucketDetails.builder()
         			.compartmentId(compartmentId)
@@ -120,10 +138,10 @@ public class OciUtil {
         
         Bucket bucket = response.getBucket();
         
-        OciResponse<Bucket> result = OciResponse.<Bucket>builder()
+        OciResponse<String> result = OciResponse.<String>builder()
 				.status((bucket == null? 500 : 200))
 				.success((bucket == null? false : true))
-				.data(bucket)
+				.data(bucket.getName())
 				.msg((bucket == null? "Fail Create Bucket " : ""))
 				.build();
         
@@ -139,6 +157,18 @@ public class OciUtil {
 	 * @throws IOException
 	 */
 	public static OciResponse<String> createPreAuth(String bucketName, Date expireDate) throws IOException {
+		//Bucket Check
+		if(!checkBucketExist(bucketName)) {
+			OciResponse<String> result = OciResponse.<String>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Bucket")
+					.build();
+	        
+			return result;
+		}
+		
 		CreatePreauthenticatedRequestDetails details = 
         		CreatePreauthenticatedRequestDetails.builder()
         			.accessType(AccessType.AnyObjectRead)
@@ -184,6 +214,8 @@ public class OciUtil {
 	 * @throws IllegalStateException 
 	 */
 	public static int createObject(String bucketName, MultipartFile file, String objectName) throws IllegalStateException, IOException {
+		//Bucket Check
+		
 		UploadConfiguration uploadConfiguration =
                 UploadConfiguration.builder()
                         .allowMultipartUploads(true)
@@ -243,6 +275,18 @@ public class OciUtil {
 	 * @throws IllegalStateException 
 	 */
 	public static OciResponse<String[]> createObjectList(String bucketName, List<Part> fileList) throws IllegalStateException, IOException {
+		//Bucket Check
+		if(!checkBucketExist(bucketName)) {
+			OciResponse<String[]> result = OciResponse.<String[]>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Bucket")
+					.build();
+	        
+			return result;
+		}
+		
 		String[] res = new String[fileList.size()];
 		
 		UploadConfiguration uploadConfiguration =
@@ -259,7 +303,9 @@ public class OciUtil {
         	FilePart file = (FilePart) fileList.get(i);
         	
         	StringBuilder sb = new StringBuilder(file.filename());
-        	sb.insert(file.filename().lastIndexOf("."), "_" + TimeUtil.getDateTimeString());
+        	int dot_idx = (file.filename().lastIndexOf(".") > 0 ? file.filename().lastIndexOf(".") : 0);
+        	
+        	sb.insert(dot_idx, "_" + TimeUtil.getDateTimeString());
         	
         	String objectName = sb.toString();
         	String ext = objectName.substring(objectName.lastIndexOf(".") + 1); 
@@ -309,6 +355,11 @@ public class OciUtil {
 	 * @throws Exception
 	 */
 	public static void downloadObject(String bucketName, String objectName, String saveFileName) throws Exception {
+		//Bucket && Object Check
+		if(!checkObjectExist(bucketName, objectName, true)) {
+			return;
+		}
+		
 		DownloadConfiguration downloadConfiguration =
                 DownloadConfiguration.builder()
                         .parallelDownloads(3)
@@ -360,29 +411,34 @@ public class OciUtil {
 	 * @return
 	 */
 	public static String getObjectSrc(String preAuth ,String bucketName, String objectName) {
-		//Get Bucket
-		ListObjectsRequest request =
-        		ListObjectsRequest.builder()
-        			.namespaceName(namespaceName)
-        			.bucketName(bucketName)
-        			.fields("size, md5, timeCreated, timeModified")
-        			.prefix(objectName)
-        			.build();
-        
-        ListObjectsResponse response = client.listObjects(request);
-        
-        ListObjects list = response.getListObjects();
-        List<ObjectSummary> objectList = list.getObjects();
-        ObjectVO data = null;
-        
-        if(!objectList.isEmpty()) {
-        	data = new ObjectVO().convertFromObjectSummary(objectList.get(0));
-        }
-        //End Get Bucket
+		//Bucket && Object Check
+		if(!checkObjectExist(bucketName, objectName, true)) {
+			return null;
+		}
 		
-        if(data == null) {
-        	return null;
-        }
+		//Get Bucket
+//		ListObjectsRequest request =
+//        		ListObjectsRequest.builder()
+//        			.namespaceName(namespaceName)
+//        			.bucketName(bucketName)
+//        			.fields("size, md5, timeCreated, timeModified")
+//        			.prefix(objectName)
+//        			.build();
+//        
+//        ListObjectsResponse response = client.listObjects(request);
+//        
+//        ListObjects list = response.getListObjects();
+//        List<ObjectSummary> objectList = list.getObjects();
+//        ObjectVO data = null;
+//        
+//        if(!objectList.isEmpty()) {
+//        	data = new ObjectVO().convertFromObjectSummary(objectList.get(0));
+//        }
+//        //End Get Bucket
+//		
+//        if(data == null) {
+//        	return null;
+//        }
         
 		StringBuilder src = new StringBuilder(host);
 		src.append("/p/").append(preAuth)
@@ -401,6 +457,30 @@ public class OciUtil {
 	 * @return
 	 */
 	public static OciResponse<String> deleteObject(String bucketName, String objectName) {
+		// Check Bucket
+		if(!checkBucketExist(bucketName)) {
+			OciResponse<String> result = OciResponse.<String>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Bucket")
+					.build();
+	        
+			return result;
+		}
+		
+		// Check Object
+		if(!checkObjectExist(bucketName, objectName, false)) {
+			OciResponse<String> result = OciResponse.<String>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Object")
+					.build();
+	        
+			return result;
+		}
+		
 		DeleteObjectRequest request = 
         		DeleteObjectRequest.builder()
         			.bucketName(bucketName)
@@ -430,6 +510,18 @@ public class OciUtil {
 	 * @return List<ObjectVO>
 	 */
 	public static OciResponse<List<ObjectVO>> getObjectList(String bucketName, String prefix, int limit) {
+		// Check Bucket
+		if(!checkBucketExist(bucketName)) {
+			OciResponse<List<ObjectVO>> result = OciResponse.<List<ObjectVO>>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Bucket")
+					.build();
+	        
+			return result;
+		}
+		
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
@@ -472,6 +564,18 @@ public class OciUtil {
 	 * @return ObjectVO
 	 */
 	public static OciResponse<ObjectVO> getObjectOne(String bucketName, String objectName) {
+		// Check Bucket
+		if(!checkBucketExist(bucketName)) {
+			OciResponse<ObjectVO> result = OciResponse.<ObjectVO>builder()
+					.status(500)
+					.success(false)
+					.data(null)
+					.msg("Can Not Found Bucket")
+					.build();
+	        
+			return result;
+		}
+		
 		ListObjectsRequest request =
         		ListObjectsRequest.builder()
         			.namespaceName(namespaceName)
@@ -534,4 +638,64 @@ public class OciUtil {
         return stream;
 	}
 	
+	/**
+	 * 버킷 존재 확인 메서드
+	 * 
+	 * @param bucketName 버킷명
+	 */
+	public static boolean checkBucketExist(String bucketName) {
+		GetBucketRequest request =
+        		GetBucketRequest.builder()
+        			.namespaceName(namespaceName)
+        			.bucketName(bucketName)
+        			.build();
+        try {
+        	GetBucketResponse response = client.getBucket(request);
+        	
+        	Bucket bucket = response.getBucket();
+    		return bucket != null;
+        } catch (BmcException e) {
+			return false;
+		}
+	    
+	}
+	
+	/**
+	 * 오브젝트 존재 확인 메서드
+	 * 
+	 * @param bucketName 버킷명
+	 * @param objectName 파일명
+	 * @param bucketCheck 버킷 체크할지 여부
+	 * @throws Exception
+	 */
+	public static boolean checkObjectExist(String bucketName, String objectName, boolean bucketCheck) {
+		if(bucketCheck) {
+			if(!checkBucketExist(bucketName)) {
+				return false;
+			}
+		}
+		
+		ListObjectsRequest request =
+        		ListObjectsRequest.builder()
+        			.namespaceName(namespaceName)
+        			.bucketName(bucketName)
+        			.fields("size, md5, timeCreated, timeModified")
+        			.prefix(objectName)
+        			.build();
+        
+        ListObjectsResponse response = client.listObjects(request);
+        
+        ListObjects list = response.getListObjects();
+        List<ObjectSummary> objectList = list.getObjects();
+        
+        if(objectList == null || objectList.isEmpty()) {
+        	return false;
+        }
+        
+        if(objectList.get(0).getName().compareTo(objectName) != 0) {
+        	return false;
+        }
+        
+		return true;
+	}
 }

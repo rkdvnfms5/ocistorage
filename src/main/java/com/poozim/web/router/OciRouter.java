@@ -18,7 +18,8 @@ public class OciRouter {
 		
 		return RouterFunctions.route()
 					.GET("/storage/test", request -> handler.test(request))
-					.POST("/storage/bucket", request -> handler.createBucket(request))
+					.POST("/storage/bucket", 
+							request -> handler.createBucket(request))
 					.POST("/storage/preauth", request -> handler.createPreAuth(request))
 					.POST("/storage/object", request -> handler.createObject(request))
 					.GET("/storage/object/{name}/one", request -> handler.getObject(request))

@@ -62,6 +62,13 @@
 		    <artifactId>lombok</artifactId>
 		</dependency>
 		
+		<!-- http api -->
+		<dependency>
+		    <groupId>org.apache.httpcomponents</groupId>
+		    <artifactId>httpmime</artifactId>
+		    <version>4.5.13</version>
+		</dependency>
+		
 		<!-- oci -->
 		<dependency>
 		  	<groupId>com.oracle.oci.sdk</groupId>
@@ -152,6 +159,20 @@
 	  	</resources>
 		<plugins>
 			<plugin>
+	            <groupId>org.springframework.boot</groupId>
+	            <artifactId>spring-boot-maven-plugin</artifactId>
+	            <configuration>	
+	            	<includeSystemScope>true</includeSystemScope>
+	            </configuration>
+	            <executions>
+	                <execution>
+	                    <goals>
+	                        <goal>repackage</goal>
+	                    </goals>
+	                </execution>
+	            </executions>
+	        </plugin>
+			<!-- <plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>	
@@ -186,7 +207,7 @@
 			            </configuration>
 			        </execution>
 			    </executions>
-			</plugin>
+			</plugin> -->
 		</plugins>
 	</build>
 
