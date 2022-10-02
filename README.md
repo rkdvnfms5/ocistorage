@@ -21,7 +21,7 @@ com.poozim.web.example 패키지 내에 Java 예시 소스코드가 있습니다
 
 ## API 명세
 
-### 버킷 생성
+### 1. 버킷 생성
 
 #### Request
  + URL : /storage/bucket
@@ -29,18 +29,18 @@ com.poozim.web.example 패키지 내에 Java 예시 소스코드가 있습니다
  + Type : application/json
  + Header
 
-|Name|Type|Description|Require|
-|---|---|---|---|
-|ACL-ID|String|아이디|Y|
-|ACL-PASSWD|String|비밀번호|Y|
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
 
 <br/>
 
  + Body
 
-|Name|Type|Description|Require|
-|---|---|---|---|
-|bucketName|String|버킷명|Y|
+|Name|Type|Description|Require|Default|Ex|
+|---|---|---|---|---|---|
+|bucketName|String|버킷명|Y|||
 
 <br/>
 
@@ -55,4 +55,76 @@ com.poozim.web.example 패키지 내에 Java 예시 소스코드가 있습니다
 |data|String|버킷명|Y|
 |msg|String|응답메세지|Y|
 
+<br/>
 
+### 2. 사전인증 생성
+
+#### Request
+ + URL : /storage/preauth
+ + Method : POST
+ + Type : application/json
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+
+<br/>
+
+ + Body
+
+|Name|Type|Description|Require|Default|Ex|
+|---|---|---|---|---|---|
+|expireDate|String|유효기간|N|5 years|YYYY-MM-DD|
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|String|사전인증값|Y|
+|msg|String|응답메세지|Y|
+
+<br/>
+
+### 3. 오브젝트 생성
+
+#### Request
+ + URL : /storage/object
+ + Method : POST
+ + Type : multipart/form-data
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+
+<br/>
+
+ + Body
+
+|Name|Type|Description|Require|Default|Ex|
+|---|---|---|---|---|---|
+|files|File|업로드할 파일|Y||파일명에 확장자 필수|
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|String[]|업로드 성공한 파일명|Y|
+|msg|String|응답메세지|Y|
