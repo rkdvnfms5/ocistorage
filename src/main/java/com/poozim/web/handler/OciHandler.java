@@ -50,15 +50,31 @@ public class OciHandler {
 	}
 	
 	public Mono<ServerResponse> createBucket(ServerRequest request) {
-		//JSON 데이터 
-		Mono<MultiValueMap<String, String>> res = request.bodyToMono(MultiValueMap.class);
-		
-		if(request.headers().contentType().get().compareTo(MediaType.APPLICATION_JSON) > 0) { //JSON이 아니면
-			res = request.formData();
+		//JSON인 경우
+		if(request.headers().contentType().get().compareTo(MediaType.APPLICATION_JSON) == 0) {
+			return createBucketJson(request);
 		}
 		
-		return res.flatMap(data -> {
+		//JSON 아닌 경우
+		return request.formData().flatMap(data -> {
 			String bucketName = Optional.ofNullable(data.getFirst("bucketName").toString().trim()).orElse("");
+			
+			if(bucketName.length() < 1) {
+				throw new BadRequestException("Empty Bucket's Name");
+			}
+				
+			try {
+				return ServerResponse.ok().body(Mono.just(OciUtil.createBucket(bucketName)), OciResponse.class);
+			} catch (IOException e) {
+				log.error(e.getMessage(), e);
+			}
+			return null;
+		});
+	}
+	
+	public Mono<ServerResponse> createBucketJson(ServerRequest request) {
+		return request.bodyToMono(Map.class).flatMap(data -> {
+			String bucketName = Optional.ofNullable(data.get("bucketName").toString().trim()).orElse("");
 			
 			if(bucketName.length() < 1) {
 				throw new BadRequestException("Empty Bucket's Name");
@@ -80,13 +96,11 @@ public class OciHandler {
 	
 	@Bucket
 	public Mono<ServerResponse> createPreAuth(ServerRequest request) {
-		Mono<MultiValueMap<String, String>> res = request.bodyToMono(MultiValueMap.class);
-		
-		if(request.headers().contentType().orElse(MediaType.APPLICATION_JSON).compareTo(MediaType.APPLICATION_JSON) > 0) { //JSON이 아니면
-			res = request.formData();
+		if(request.headers().contentType().orElse(MediaType.APPLICATION_JSON).compareTo(MediaType.APPLICATION_JSON) == 0) { //JSON이면
+			return createPreAuthJson(request);
 		}
 		
-		return res.flatMap(data -> {
+		return request.formData().flatMap(data -> {
 			String bucketName = request.headers().firstHeader("X-BUCKET");
 			String expireDateStr = Optional.ofNullable(data.getFirst("expireDate").toString().trim()).orElse("");
 			Date expireDate;
@@ -116,6 +130,40 @@ public class OciHandler {
 			}
 			return null;
 		}).log();
+	}
+	
+	@Bucket
+	public Mono<ServerResponse> createPreAuthJson(ServerRequest request) {
+		return request.bodyToMono(Map.class).flatMap(data -> {
+			String bucketName = request.headers().firstHeader("X-BUCKET");
+			String expireDateStr = Optional.ofNullable(data.get("expireDate").toString().trim()).orElse("");
+			Date expireDate;
+			
+			//exception BucketName Param
+			if(bucketName.length() < 1) {
+				throw new BadRequestException("Empty Bucket's Name");
+			}
+				
+			//Set ExpireDate Param
+			if(expireDateStr.length() < 1) {
+				//Default ExpireDate is 5 Years
+				expireDate = java.sql.Date.valueOf(LocalDate.now().plusYears(5));
+			} else {
+				SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+				try {
+					expireDate = format.parse(expireDateStr);
+				} catch (ParseException e) {
+					throw new BadRequestException("Incorret ExpireDate Type. It Must Be yyyy-MM-dd");
+				}
+			}
+			
+			try {
+				return ServerResponse.ok().body(Mono.just(OciUtil.createPreAuth(bucketName, expireDate)), OciResponse.class);
+			} catch (IOException e) {
+				log.error(e.getMessage(), e);
+			}
+			return null;
+		});
 	}
 	
 	@Bucket
@@ -202,10 +250,10 @@ public class OciHandler {
 		String src = OciUtil.getObjectSrc(preAuth, bucketName, objectName);
 		
 		OciResponse<String> result = OciResponse.<String>builder()
-										.status(200)
-										.success(true)
+										.status((src == null || src.length() < 1? 500 : 200))
+										.success((src == null || src.length() < 1? false : true))
 										.data(src)
-										.msg("")
+										.msg((src == null || src.length() < 1? "Not Founded Bucket Or ObjectName" : ""))
 										.build();
 		
 		return ServerResponse.ok().body(Mono.just(result), OciResponse.class);
