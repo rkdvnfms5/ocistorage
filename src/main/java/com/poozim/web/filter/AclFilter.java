@@ -50,7 +50,7 @@ public class AclFilter implements WebFilter{
 		//check ACL Essential Headers
 		if(id == null || password == null) {
 			log.error("ACL ID OR PASSWORD VALUE IS NULL");
-			throw new CustomException(ErrorCode.HEADER_NOT_FOUND);
+			throw new CustomException(ErrorCode.REQUIRE_VALUE_ACL);
 		}
 		
 		if(!id.equals(this.ACL_ID) || !password.equals(this.ACL_PASSWD)) {

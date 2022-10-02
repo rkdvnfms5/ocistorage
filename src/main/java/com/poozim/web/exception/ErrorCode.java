@@ -10,13 +10,16 @@ public enum ErrorCode {
 	INTERNAL_SERVER_ERROR(500, "ER004", "INTERNAL SERVER ERROR"),
 	INIT_SERVER_ERROR(500, "ER005", "서버 초기 세팅 에러"),
 	
-	HEADER_NOT_FOUND(400, "ER006", "필수 헤더값이 존재하지 않습니다."),
-	PREAUTH_NOT_FOUND(400, "ER007", "사전 인증값이 존재하지 않습니다."),
-	BUCKET_NOT_FOUND(400, "ER008", "버킷명이 존재하지 않습니다."),
+	REQUIRE_VALUE_HEADER(400, "ER006", "필수 헤더값이 존재하지 않습니다."),
+	REQUIRE_VALUE_ACL(400, "ER007", "ACL 아이디 혹은 비밀번호는 필수값입니다."),
+	REQUIRE_VALUE_PREAUTH(400, "ER008", "사전인증은 필수값입니다."),
+	REQUIRE_VALUE_BUCKET(400, "ER009", "버킷명은 필수값입니다."),
 	
-	OBJECT_UPLOAD_ERROR(500, "ER009", "오브젝트 업로드에 실패했습니다."),
+	BUCKET_NOT_FOUND(500, "ER010", "버킷이 존재하지 않습니다."),
+	OBJECT_NOT_FOUND(500, "ER011", "오브젝트가 존재하지 않습니다."),
+	OBJECT_UPLOAD_ERROR(500, "ER012", "오브젝트 업로드에 실패했습니다."),
 	
-	PROPERTIES_READ_ERROR(500, "ER010", "프로퍼티 파일 읽기를 실패했습니다.");
+	PROPERTIES_READ_ERROR(500, "ER013", "프로퍼티 파일 읽기를 실패했습니다.");
 	;
 	
 	private final String code;

@@ -25,7 +25,7 @@ public class AuthAspect {
 		String preAuth = Optional.ofNullable(request.headers().firstHeader("X-AUTH")).orElse("");
 		
 		if(preAuth.length() == 0) {
-			throw new CustomException(ErrorCode.PREAUTH_NOT_FOUND);
+			throw new CustomException(ErrorCode.REQUIRE_VALUE_PREAUTH);
 		}
 		
 //		log.info("X-AUTH Value -> " + preAuth);
@@ -39,7 +39,7 @@ public class AuthAspect {
 		String bucketName = Optional.ofNullable(request.headers().firstHeader("X-BUCKET")).orElse("");
 		
 		if(bucketName.length() == 0) {
-			throw new CustomException(ErrorCode.BUCKET_NOT_FOUND);
+			throw new CustomException(ErrorCode.REQUIRE_VALUE_BUCKET);
 		}
 		
 //		log.info("X-BUCKET Value -> " + bucketName);
