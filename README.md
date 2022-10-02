@@ -128,3 +128,144 @@ com.poozim.web.example 패키지 내에 Java 예시 소스코드가 있습니다
 |success|Boolean|성공여부|N|
 |data|String[]|업로드 성공한 파일명|Y|
 |msg|String|응답메세지|Y|
+
+<br/>
+
+### 4. 오브젝트 단일 정보
+
+#### Request
+ + URL : /storage/object/{오브젝트명}/one
+ + Method : GET
+ + Type : 무관
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|ObjectVO|ObjectVO 클래스|Y|
+|msg|String|응답메세지|Y|
+
+##### ObjectVO
+
+|Name|Type|Description|Nullable|Ex|
+|---|---|---|---|---|
+|name|String|오브젝트명|N||
+|size|Long|사이즈|N||
+|regdate|String|생성일시|N|yyyy-MM-dd HH:mm:ss|
+|moddate|String|수정일시|Y|yyyy-MM-dd HH:mm:ss|
+
+<br/>
+
+### 5. 오브젝트 리스트 정보
+
+#### Request
+ + URL : /storage/object/{오브젝트명}/list
+ + Method : GET
+ + Type : 무관
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|List<ObjectVO>|ObjectVO 클래스|Y|
+|msg|String|응답메세지|Y|
+
+##### ObjectVO
+
+|Name|Type|Description|Nullable|Ex|
+|---|---|---|---|---|
+|name|String|오브젝트명|N||
+|size|Long|사이즈|N||
+|regdate|String|생성일시|N|yyyy-MM-dd HH:mm:ss|
+|moddate|String|수정일시|Y|yyyy-MM-dd HH:mm:ss|
+
+<br/>
+
+### 6. 오브젝트 접근 URI
+
+#### Request
+ + URL : /storage/object/{오브젝트명}/src
+ + Method : GET
+ + Type : 무관
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+|X-AUTH|String|사전인증|Y||
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|String|오브젝트 URI|Y|
+|msg|String|응답메세지|Y|
+
+<br/>
+
+### 7. 오브젝트 삭제
+
+#### Request
+ + URL : /storage/object/{오브젝트명}
+ + Method : DELETE
+ + Type : 무관
+ + Header
+
+|Name|Type|Description|Require|Default|
+|---|---|---|---|---|
+|ACL-ID|String|아이디|Y||
+|ACL-PASSWD|String|비밀번호|Y||
+|X-BUCKET|String|버킷명|Y||
+
+<br/>
+
+#### Response
+
+ + Body
+ 
+|Name|Type|Description|Nullable|
+|---|---|---|---|
+|status|Integer|응답코드|N|
+|success|Boolean|성공여부|N|
+|data|String|오브젝트명|Y|
+|msg|String|응답메세지|Y|
+
+
+
+
+
+
